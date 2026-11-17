@@ -2,6 +2,8 @@ import sys, os
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
 
+from llm import judge
+
 from deepeval.evaluate import evaluate
 from deepeval.metrics import GEval, ConversationalGEval
 from deepeval.test_case import Turn, ConversationalTestCase, MultiTurnParams
@@ -27,7 +29,7 @@ correctness = ConversationalGEval(
          "Did the chatbot fully resolve the customer's issue? "
       "It should use tools when needed and provide accurate answers."
     ),
-    model="gpt-4o",
+    model=judge(),
     threshold=0.80,
     evaluation_params=[
         MultiTurnParams.ROLE,

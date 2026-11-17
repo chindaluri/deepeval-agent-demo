@@ -1,7 +1,7 @@
 """
 chatbot.py
 ==========
-A multi-turn customer-support chatbot with tool calling, built with GPT-4o.
+A multi-turn customer-support chatbot with tool calling, built with Gemini.
 
 Tools available (same data as agent_plain.py):
   - get_order_status(order_id)   → real-time shipping status from in-memory DB
@@ -26,14 +26,17 @@ How to run standalone:
     python chatbot.py
 """
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 import json
+
 from openai import OpenAI
 
-client = OpenAI()
+from guardrails import screen_input, screen_output
+from llm import MODEL_NAME, api_key, pace
+
+client = OpenAI(
+    api_key=api_key(),
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+)
 
 # ---------------------------------------------------------------------------
 # In-memory data (same as agent_plain.py)
@@ -144,12 +147,21 @@ def chat(
         tools_called : list of {"name": ..., "args": ..., "result": ...}
                        for all tools the model called this turn
     """
+    blocked = screen_input(user_message)
+    if blocked is not None:
+        history = history + [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": blocked},
+        ]
+        return blocked, history, []
+
     history = history + [{"role": "user", "content": user_message}]
     tools_called = []
 
     while True:
+        pace()
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=MODEL_NAME,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
             tools=TOOLS,
             tool_choice="auto",
@@ -160,7 +172,7 @@ def chat(
 
         # No tool call — final answer
         if not msg.tool_calls:
-            reply = msg.content
+            reply = screen_output(user_message, msg.content)
             history = history + [{"role": "assistant", "content": reply}]
             return reply, history, tools_called
 

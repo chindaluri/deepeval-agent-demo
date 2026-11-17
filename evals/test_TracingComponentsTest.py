@@ -2,6 +2,8 @@ import sys, os
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
 
+from llm import judge
+
 from deepeval.contextvars import get_current_golden
 from deepeval.dataset import EvaluationDataset, Golden
 from deepeval.metrics import TaskCompletionMetric, ToolCorrectnessMetric
@@ -25,7 +27,7 @@ def support_agent(user_input: str) -> str:
 
 
 
-task_completion = TaskCompletionMetric(threshold=0.7,model="gpt-4o")
+task_completion = TaskCompletionMetric(threshold=0.7, model=judge())
 
 tool_correctness = ToolCorrectnessMetric()
 
