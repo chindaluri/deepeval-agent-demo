@@ -7,3 +7,12 @@ langgraph
 langchain-core
 openai
 python-dotenv
+google-genai
+langchain-google-genai
+numpy
+chromadb
+# deepteam 1.0.10 declares Requires-Python <3.14. On Python 3.14:
+#   pip install --ignore-requires-python -r requirements.txt
+deepteam==1.0.10
+# Imported by deepteam.telemetry but missing from deepteam's dependencies.
+sentry-sdk

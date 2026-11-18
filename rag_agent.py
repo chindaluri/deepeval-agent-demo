@@ -5,10 +5,10 @@ A customer-support agent that answers questions by retrieving from a small
 in-memory policy knowledge base instead of calling fixed lookup functions.
 
 Architecture:
-  - Knowledge base: 9 policy documents stored as embeddings (OpenAI)
+  - Knowledge base: 9 policy documents stored as Gemini embeddings
   - Vector store: langchain_core InMemoryVectorStore (no external DB needed)
   - Tool: search_policies(query) — semantic search, returns top-3 chunks
-  - LLM: GPT-4o (same as agent_plain.py, just with retrieval instead of hard-coded data)
+  - LLM: Gemini (same as agent_plain.py, just with retrieval instead of hard-coded data)
   - Instrumentation: DeepEval CallbackHandler + @observe, same 4-line pattern
 
 What's new vs agent_instrumented.py:
@@ -17,18 +17,17 @@ What's new vs agent_instrumented.py:
     so that RAG metrics (Faithfulness, Contextual Precision/Recall) can run
 """
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 from langchain_core.tools import tool
 from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import OpenAIEmbeddings
 from langchain.agents import create_agent
+
+from llm import chat_model
+from llm import embeddings as gemini_embeddings
 
 from deepeval.integrations.langchain import CallbackHandler
 from deepeval.tracing.context import update_current_trace
+
+from guardrails import screen_input, screen_output
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +76,7 @@ POLICY_DOCS = [
 # ---------------------------------------------------------------------------
 # Build the vector store once at import time.
 # ---------------------------------------------------------------------------
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+embeddings = gemini_embeddings()
 vector_store = InMemoryVectorStore(embedding=embeddings)
 vector_store.add_texts(POLICY_DOCS)
 
@@ -103,7 +102,7 @@ def search_policies(query: str) -> str:
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
-llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+llm = chat_model()
 
 agent = create_agent(
     model=llm,
@@ -127,11 +126,16 @@ def rag_support_agent(user_input: str) -> str:
     global _last_retrieved
     _last_retrieved = []
 
+    blocked = screen_input(user_input)
+    if blocked is not None:
+        update_current_trace(output=blocked, retrieval_context=None)
+        return blocked
+
     result = agent.invoke(
         {"messages": [{"role": "user", "content": user_input}]},
         config={"callbacks": [deepeval_callback]},
     )
-    reply = result["messages"][-1].content
+    reply = screen_output(user_input, result["messages"][-1].content)
 
     # Set clean reply string and retrieved chunks on the trace.
     update_current_trace(

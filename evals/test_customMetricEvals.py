@@ -2,6 +2,8 @@
 import sys, os
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
+from llm import judge
+
 from deepeval.contextvars import get_current_golden
 from deepeval.dataset import EvaluationDataset, Golden
 from deepeval.metrics import GEval
@@ -27,7 +29,7 @@ correctness = GEval(
         "as the expected output. Minor wording differences are acceptable; "
         "missing or wrong facts are not."
     ),
-    model="gpt-4o",
+    model=judge(),
     threshold=0.79,
     evaluation_params=[
         SingleTurnParams.INPUT,

@@ -7,6 +7,8 @@ import os
 import sys
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
+from llm import judge
+
 from deepeval.contextvars import get_current_golden
 from deepeval.dataset import Golden
 from deepeval.dataset import Golden, EvaluationDataset
@@ -44,25 +46,25 @@ dataset = EvaluationDataset(goldens = [
 
 precisionMetric = ContextualPrecisionMetric(
     threshold=0.7,
-    model = "gpt-4o"
+    model=judge()
 
 )
 recallMetric = ContextualRecallMetric(
     threshold=0.7,
-    model="gpt-4o",
+    model=judge(),
     include_reason=True
 )
 
 relevancyMetric = AnswerRelevancyMetric(
     threshold=0.7,
-    model="gpt-4o",
+    model=judge(),
     include_reason=True
 )
 
 
 faithfulMetric = FaithfulnessMetric(
     threshold=0.7,
-    model="gpt-4o",
+    model=judge(),
     include_reason=True
 )
 

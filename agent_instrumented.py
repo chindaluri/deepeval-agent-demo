@@ -19,21 +19,20 @@ without ever touching this file again.
 
 import asyncio
 import os
+import sys
+from concurrent.futures import ThreadPoolExecutor
 
-import nest_asyncio
-nest_asyncio.apply()
-
-from dotenv import load_dotenv
-from langchain_anthropic import ChatAnthropic
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-load_dotenv()
+from llm import chat_model
 from langchain_core.tools import tool
 from langchain.agents import create_agent
 
 # --- (1) NEW: import DeepEval tracing primitives --------------------------
 from deepeval.integrations.langchain import CallbackHandler
 from deepeval.tracing.context import update_current_trace
+
+from guardrails import screen_input, screen_output
 
 
 # ---------------------------------------------------------------------------
@@ -76,13 +75,20 @@ def get_refund_policy(category: str) -> str:
 # ---------------------------------------------------------------------------
 # Same agent as agent_plain.py.
 # ---------------------------------------------------------------------------
-llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+llm = chat_model()
+
+
+def _run_async(coro):
+    """Load MCP tools on a private loop so startup does not touch DeepEval's loop."""
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
+
 
 # Load one extra tool from the MCP server at startup and merge it in.
-_mcp_tools = asyncio.run(
+_mcp_tools = _run_async(
     MultiServerMCPClient({
         "shopease": {
-            "command": "python",
+            "command": sys.executable,
             "args": [os.path.join(os.path.dirname(os.path.abspath(__file__)), "mcp_server.py")],
             "transport": "stdio",
         }
@@ -109,12 +115,19 @@ deepeval_callback = CallbackHandler()
 
 def support_agent(user_input: str) -> str:
     """Run the agent on a user message and return the final reply."""
+    blocked = screen_input(user_input)
+    if blocked is not None:
+        update_current_trace(output=blocked)
+        return blocked
+
     # --- (3) NEW: pass the callback handler in the .invoke() config ------
-    result = asyncio.run(agent.ainvoke(
+    # Sync invoke stays on the caller thread. ainvoke opens a second event
+    # loop, and DeepEval's callbacks then fail with "attached to a different loop".
+    result = agent.invoke(
         {"messages": [{"role": "user", "content": user_input}]},
         config={"callbacks": [deepeval_callback]},
-    ))
-    reply = result["messages"][-1].content
+    )
+    reply = screen_output(user_input, result["messages"][-1].content)
     update_current_trace(output=reply)
     return reply
 

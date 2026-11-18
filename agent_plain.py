@@ -1,7 +1,7 @@
 """
 agent_plain.py
 ==============
-A simple customer-support agent built with LangChain + Claude.
+A simple customer-support agent built with LangChain + Gemini.
 No evaluation code anywhere. This is what a developer would write
 if they'd never heard of DeepEval.
 
@@ -9,13 +9,10 @@ The agent has two tools:
   - get_order_status(order_id)  -> shipping info
   - get_refund_policy(category) -> refund rules
 
-It uses Claude to decide which tool to call and to compose the answer.
+It uses Gemini to decide which tool to call and to compose the answer.
 """
 
-from dotenv import load_dotenv
-from langchain_anthropic import ChatAnthropic
-
-load_dotenv()
+from llm import chat_model
 from langchain_core.tools import tool
 from langchain.agents import create_agent
 
@@ -58,9 +55,9 @@ def get_refund_policy(category: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# The agent — a LangGraph ReAct agent powered by Claude.
+# The agent — a LangGraph ReAct agent powered by Gemini.
 # ---------------------------------------------------------------------------
-llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+llm = chat_model()
 
 agent = create_agent(
     model=llm,
