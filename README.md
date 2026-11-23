@@ -128,19 +128,25 @@ python evals/test_rag_agent.py
 python evals/test_chatbot.py
 python evals/test_chatbot_customreqd.py
 python evals/test_agent_synthesized.py
+python evals/test_agent_planning.py
+python evals/test_safety.py
+python evals/test_chatbot_agentic.py
 python evals/test_red_team.py
 ```
 
 | Script | Agent | Metrics | Cases |
 |---|---|---|---|
 | `evals/test_TaskCompletion.py` | `support_agent` | Task Completion (0.7) | One order-status question, scored with `evaluate()` |
-| `evals/test_TracingComponentsTest.py` | `support_agent` | Task Completion (0.7), Tool Correctness | Order status must call `get_order_status`. Electronics refund must call `get_refund_policy`. |
+| `evals/test_TracingComponentsTest.py` | `support_agent` | Task Completion (0.7), Tool Correctness, Argument Correctness (0.5) | Order status must call `get_order_status`. Electronics refund must call `get_refund_policy`. Shipping options must call the MCP tool `get_shipping_options`. |
 | `evals/test_multipleEvalsTest.py` | `support_agent` | Answer Relevancy (0.7), Step Efficiency (0.5), Prompt Alignment (0.7) | Three inputs. No expected output. |
 | `evals/test_customMetricEvals.py` | `support_agent` | GEval Correctness (0.79) | ORD-1042 is shipped and arrives by May 13th. |
-| `evals/test_rag_agent.py` | `rag_support_agent` | Contextual Precision, Contextual Recall, Answer Relevancy, Faithfulness (all 0.7) | Electronics returns, and express shipping at $15. |
-| `evals/test_chatbot.py` | `chat` | Turn Relevancy, Knowledge Retention, Conversation Completeness (all 0.5) | Four turns about ORD-1042, its ETA, and an express upgrade. |
+| `evals/test_rag_agent.py` | `rag_support_agent` | Contextual Precision, Contextual Recall, Contextual Relevancy, Answer Relevancy, Faithfulness (all 0.7), Hallucination (0.5) | Electronics returns, and express shipping at $15. Hallucination is scored against the golden `context`. |
+| `evals/test_chatbot.py` | `chat` | Turn Relevancy, Knowledge Retention, Conversation Completeness, Role Adherence, Topic Adherence (all 0.5) | Four turns about ORD-1042, its ETA, and an express upgrade. |
 | `evals/test_chatbot_customreqd.py` | `chat` | Conversational GEval Correctness (0.80) | Same four turns. Scores role and content. |
+| `evals/test_chatbot_agentic.py` | `chat` | Tool Use (0.5), Goal Accuracy (0.5) | Same four turns, with the tools each turn actually called. |
+| `evals/test_agent_planning.py` | `support_agent` | Plan Adherence (0.5), Plan Quality (0.5), Agent Loop Detection (0.5) | One order-status question. Loop detection reads the trace and does not call the judge. |
 | `evals/test_agent_synthesized.py` | `support_agent` | Bias, Toxicity, PII Leakage (all 0.5) | Goldens are generated from `policies.txt` (up to 2 per chunk). Needs `chromadb`. |
+| `evals/test_safety.py` | `support_agent` | Role Violation, Misuse, Non-Advice (all 0.5) | One order-status question. Non-advice checks for financial, medical, and legal advice. |
 | `evals/test_red_team.py` | `support_agent` | DeepTeam attack pass/fail | Bias, toxicity, PII leakage, prompt leakage, each attacked with prompt injection and roleplay. |
 
 Tool Correctness matches tool names, not arguments. The chatbot custom metric does not score `tools_called`.
@@ -155,20 +161,33 @@ Component evals (`test_TracingComponentsTest.py`, `test_multipleEvalsTest.py`, `
 |---|---|---|---|
 | Task Completion | No | No | Yes |
 | Tool Correctness | No | No | No (name match) |
+| Argument Correctness | No | No | Yes |
 | Answer Relevancy | No | No | Yes |
 | Prompt Alignment | No | No | Yes |
 | Step Efficiency | No | No | Yes |
+| Plan Adherence | No | No | Yes |
+| Plan Quality | No | No | Yes |
+| Agent Loop Detection | No | No | No (trace patterns) |
 | GEval Correctness | Yes | No | Yes |
 | Faithfulness | No | Yes | Yes |
+| Hallucination | No (`context`) | No | Yes |
 | Contextual Precision | Yes | Yes | Yes |
 | Contextual Recall | Yes | Yes | Yes |
+| Contextual Relevancy | No | Yes | Yes |
 | Turn Relevancy | No | No | Yes |
 | Knowledge Retention | No | No | Yes |
 | Conversation Completeness | No | No | Yes |
+| Role Adherence | No | No | Yes |
+| Topic Adherence | No | No | Yes |
+| Tool Use | No | No | Yes |
+| Goal Accuracy | No | No | Yes |
 | Conversational GEval | No | No | Yes |
 | Bias | No | No | Yes |
 | Toxicity | No | No | Yes |
 | PII Leakage | No | No | Yes |
+| Role Violation | No | No | Yes |
+| Misuse | No | No | Yes |
+| Non-Advice | No | No | Yes |
 
 ---
 

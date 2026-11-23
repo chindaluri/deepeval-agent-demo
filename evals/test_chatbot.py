@@ -5,7 +5,13 @@ sys.path.insert( 0, os.path.dirname( os.path.dirname( os.path.abspath( __file__ 
 from llm import judge
 
 from deepeval.evaluate import evaluate
-from deepeval.metrics import TurnRelevancyMetric, KnowledgeRetentionMetric, ConversationCompletenessMetric
+from deepeval.metrics import (
+    ConversationCompletenessMetric,
+    KnowledgeRetentionMetric,
+    RoleAdherenceMetric,
+    TopicAdherenceMetric,
+    TurnRelevancyMetric,
+)
 from deepeval.test_case import ConversationalTestCase, Turn
 
 
@@ -27,9 +33,28 @@ for user_msg in [
 turnRelevancyMetric = TurnRelevancyMetric(threshold=0.5, model=judge())
 retentionMetric = KnowledgeRetentionMetric(threshold=0.5, model=judge())
 completnessMetric = ConversationCompletenessMetric(threshold=0.5, model=judge())
-
-test_case = ConversationalTestCase(
-    turns = turns
+roleAdherenceMetric = RoleAdherenceMetric(threshold=0.5, model=judge())
+topicAdherenceMetric = TopicAdherenceMetric(
+    relevant_topics=["ShopEasy orders, refunds, delivery, and shipping"],
+    threshold=0.5,
+    model=judge(),
 )
 
-evaluate(test_cases = [test_case], metrics = [turnRelevancyMetric,retentionMetric,completnessMetric])
+test_case = ConversationalTestCase(
+    turns=turns,
+    chatbot_role=(
+        "Friendly ShopEasy customer-support agent. Help with orders, "
+        "refunds, and shipping, and stay on that job."
+    ),
+)
+
+evaluate(
+    test_cases=[test_case],
+    metrics=[
+        turnRelevancyMetric,
+        retentionMetric,
+        completnessMetric,
+        roleAdherenceMetric,
+        topicAdherenceMetric,
+    ],
+)

@@ -6,7 +6,11 @@ from llm import judge
 
 from deepeval.contextvars import get_current_golden
 from deepeval.dataset import EvaluationDataset, Golden
-from deepeval.metrics import TaskCompletionMetric, ToolCorrectnessMetric
+from deepeval.metrics import (
+    ArgumentCorrectnessMetric,
+    TaskCompletionMetric,
+    ToolCorrectnessMetric,
+)
 from deepeval.test_case import ToolCall
 from deepeval.tracing import observe, update_current_trace
 
@@ -30,16 +34,20 @@ def support_agent(user_input: str) -> str:
 task_completion = TaskCompletionMetric(threshold=0.7, model=judge())
 
 tool_correctness = ToolCorrectnessMetric()
+argument_correctness = ArgumentCorrectnessMetric(threshold=0.5, model=judge())
 
 dataSet = EvaluationDataset(goldens= [
     Golden(input = "Where is my order ORD-1042?",
            expected_tools=[ToolCall(name="get_order_status")]),
 
     Golden(input = "What is refund policy for electronics?",
-           expected_tools=[ToolCall(name="get_refund_policy")])
+           expected_tools=[ToolCall(name="get_refund_policy")]),
+
+    Golden(input="What shipping options do you offer?",
+           expected_tools=[ToolCall(name="get_shipping_options")]),
 ])
 
 
-for golden in dataSet.evals_iterator(metrics =[task_completion,tool_correctness]):
+for golden in dataSet.evals_iterator(metrics=[task_completion, tool_correctness, argument_correctness]):
     support_agent(golden.input)
 
